@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4efe6">
+<title>Ritmo</title>
+<style>
+  :root{
+    --bg:#f4efe6; --ink:#2a2420; --muted:#8a7f72; --line:#d9cfbf;
+    --accent:#b5482a; --card:#fbf8f2;
+    --serif:Georgia,"Times New Roman",serif; --sans:system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#1c1915;--ink:#ece4d6;--muted:#8f8476;--line:#3a332b;--accent:#e07a58;--card:#241f19}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh;
+    background-image:radial-gradient(rgba(0,0,0,.035) 1px,transparent 1px);background-size:4px 4px}
+  header{padding:calc(env(safe-area-inset-top,0px) + 20px) 20px 14px;border-bottom:1px solid var(--line)}
+  h1{font-family:var(--serif);font-style:italic;font-size:38px;margin:0;color:var(--accent);letter-spacing:-1px}
+  h2{font-family:var(--serif);font-size:24px;margin:0 0 6px;font-weight:normal}
+  .muted{color:var(--muted);font-size:13px}
+  main{max-width:640px;margin:auto;padding:18px 20px 110px}
+  .tela{display:none}
+  .tela.on{display:block}
+  .resumo{font-family:var(--serif);font-size:20px;margin:4px 0 6px}
+  .lbl{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:16px 0 6px}
+
+  .item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px dashed var(--line)}
+  .item .info{flex:1;min-width:0;cursor:pointer}
+  .item .nome{font-family:var(--serif);font-size:18px}
+  .item .meta{text-align:right;font-size:13px;color:var(--muted);white-space:nowrap}
+
+  .check{width:32px;height:32px;flex:none;border:1.5px solid var(--ink);background:none;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:16px;padding:0;cursor:pointer}
+  .check.on{background:var(--ink);color:var(--bg)}
+  .check.vazio{border-color:var(--line);cursor:default}
+
+  button{font:inherit;font-size:15px;padding:10px 16px;cursor:pointer;background:var(--ink);color:var(--bg);border:1px solid var(--ink)}
+  button.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+  button.perigo{background:none;color:var(--accent);border:1px solid var(--line)}
+  .acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+
+  .fab{position:fixed;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);width:60px;height:60px;
+    border-radius:50%;padding:0;background:var(--accent);border:0;color:var(--bg);font-size:30px;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center}
+
+  .voltar{background:none;border:0;color:var(--accent);padding:0;margin-bottom:12px;font-size:15px}
+  .box{background:var(--card);border:1px solid var(--line);padding:14px;margin:14px 0}
+  .big{font-family:var(--serif);font-size:34px;line-height:1;margin:4px 0}
+  .barra{height:6px;background:var(--line);margin:10px 0 4px}
+  .barra i{display:block;height:100%;background:var(--accent)}
+
+  .mes{display:flex;align-items:center;justify-content:space-between;margin-top:20px}
+  .mes div{font-family:var(--serif);font-size:18px;text-transform:capitalize}
+  .mes button{padding:6px 14px}
+  .semana,.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+  .semana span{text-align:center;font-size:12px;color:var(--muted)}
+  .dia{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
+    background:none;color:var(--ink);padding:0;font-size:15px;font-variant-numeric:tabular-nums}
+  .dia.feito{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+  .dia.hoje{box-shadow:inset 0 0 0 2px var(--ink)}
+  .dia.fora{opacity:.3}
+  .dia:disabled{opacity:.2;cursor:default}
+  .vazio-cell{aspect-ratio:1}
+
+  dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:2px;
+    width:min(92vw,420px);padding:20px}
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  input[type=text],input[type=number]{font:inherit;color:var(--ink);background:transparent;border:0;
+    border-bottom:1px solid var(--line);padding:8px 2px;width:100%;outline:none;margin-bottom:4px}
+  input:focus{border-bottom-color:var(--accent)}
+  .dias{display:flex;flex-wrap:wrap;gap:6px}
+  .dias label{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);padding:7px 10px;font-size:14px;cursor:pointer}
+  .dias input{accent-color:var(--accent)}
+  .dlg-acoes{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ritmo</h1>
+  <small class="muted" id="data"></small>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="home" class="tela on">
+    <div class="resumo" id="resumo"></div>
+    <div id="lista"></div>
+
+    <div class="acoes">
+      <button class="ghost" onclick="exportar()">Exportar</button>
+      <label class="ghost" style="padding:10px 16px;border:1px solid var(--line);font-size:15px;cursor:pointer">
+        Importar
+        <input type="file" accept="application/json" onchange="importar(this)" style="display:none">
+      </label>
+    </div>
+    <p class="muted" style="margin-top:14px">Os dados ficam neste navegador. Exporte antes de trocar de aparelho.</p>
+  </section>
+
+  <!-- DETALHE -->
+  <section id="detalhe" class="tela">
+    <button class="voltar" onclick="voltar()">← Voltar</button>
+    <h2 id="dNome"></h2>
+    <div class="muted" id="dDesc"></div>
+
+    <div class="box">
+      <div class="lbl" style="margin-top:0">Progresso</div>
+      <div class="big" id="dProg"></div>
+      <div class="barra" id="dBarWrap"><i id="dBar" style="width:0"></i></div>
+      <div class="muted" id="dInfo"></div>
+    </div>
+
+    <div class="mes">
+      <button class="ghost" onclick="mudarMes(-1)">‹</button>
+      <div id="dMes"></div>
+      <button class="ghost" onclick="mudarMes(1)">›</button>
+    </div>
+    <div class="semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+    <div class="cal" id="cal"></div>
+    <p class="muted" style="margin-top:10px">Toque num dia para marcar ou desmarcar. Os feitos ficam em destaque.</p>
+
+    <div class="acoes">
+      <button class="ghost" onclick="abrirEditar()">Editar</button>
+      <button class="perigo" onclick="apagarAtual()">Apagar</button>
+    </div>
+  </section>
+</main>
+
+<button id="fab" class="fab" onclick="abrirNovo()" aria-label="Novo hábito">+</button>
+
+<!-- FORMULÁRIO -->
+<dialog id="dlgForm">
+  <form id="form">
+    <h2 id="tituloForm">Novo hábito</h2>
+
+    <label class="lbl">Nome</label>
+    <input type="text" name="nome" required placeholder="Ex: Academia">
+
+    <label class="lbl">Descrição</label>
+    <input type="text" name="desc" placeholder="Opcional">
+
+    <label class="lbl">Dias</label>
+    <div class="dias">
+      <label><input type="checkbox" name="wd" value="1">Seg</label>
+      <label><input type="checkbox" name="wd" value="2">Ter</label>
+      <label><input type="checkbox" name="wd" value="3">Qua</label>
+      <label><input type="checkbox" name="wd" value="4">Qui</label>
+      <label><input type="checkbox" name="wd" value="5">Sex</label>
+      <label><input type="checkbox" name="wd" value="6">Sáb</label>
+      <label><input type="checkbox" name="wd" value="0">Dom</label>
+    </div>
+
+    <label class="lbl">Meta (dias feitos no total)</label>
+    <input type="number" name="meta" min="1" inputmode="numeric" placeholder="Sem meta">
+
+    <div class="dlg-acoes">
+      <button type="button" class="ghost" onclick="dlgForm.close()">Cancelar</button>
+      <button type="submit">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- AVISO DE META -->
+<dialog id="dlgAviso">
+  <h2>Meta atingida</h2>
+  <p id="avisoTxt" style="line-height:1.5"></p>
+  <div class="dlg-acoes"><button onclick="dlgAviso.close()">Ok</button></div>
+</dialog>
+
+<script>
+const KEY = 'ritmo-habitos-v2';
+const NOMES = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+
+const dlgForm = document.getElementById('dlgForm');
+const dlgAviso = document.getElementById('dlgAviso');
+
+let dados = carregar();
+let atualId = null;
+let editandoId = null;
+let mesView = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+// ---------- utilidades ----------
+function carregar(){
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY));
+    return d && Array.isArray(d.habitos) ? d : { habitos: [] };
+  } catch { return { habitos: [] }; }
+}
+function salvar(){ localStorage.setItem(KEY, JSON.stringify(dados)); }
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const chaveData = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const hoje = () => chaveData(new Date());
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const primeiroDoMes = d => new Date(d.getFullYear(), d.getMonth(), 1);
+const getHabito = id => dados.habitos.find(h => h.id === id);
+const totalFeitos = h => Object.keys(h.dias).length;
+const ehDia = (h, k) => { const [y,m,d] = k.split('-').map(Number); return h.semana.includes(new Date(y, m-1, d).getDay()); };
+const textoDias = h => h.semana.length === 7 ? 'todos os dias' : h.semana.map(i => NOMES[i]).join(', ');
+
+function sequencia(h){
+  let n = 0;
+  const d = new Date();
+  if (!h.dias[chaveData(d)]) d.setDate(d.getDate() - 1);
+  while (h.dias[chaveData(d)]) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+// ---------- telas ----------
+function mostrarTela(id){
+  document.getElementById('home').classList.toggle('on', id === 'home');
+  document.getElementById('detalhe').classList.toggle('on', id === 'detalhe');
+  document.getElementById('fab').style.display = id === 'home' ? 'flex' : 'none';
+  window.scrollTo(0, 0);
+}
+
+// ---------- home ----------
+function renderHome(){
+  const k = hoje();
+  document.getElementById('data').textContent =
+    new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+
+  const deHoje = dados.habitos.filter(h => ehDia(h, k));
+  const feitosHoje = deHoje.filter(h => h.dias[k]).length;
+  document.getElementById('resumo').textContent = deHoje.length
+    ? `Hoje: ${feitosHoje} de ${deHoje.length} feitos`
+    : 'Nada agendado para hoje';
+
+  const lista = document.getElementById('lista');
+  if (!dados.habitos.length){
+    lista.innerHTML = '<p class="muted" style="margin-top:20px">Nenhum hábito ainda. Toque no + para criar o primeiro.</p>';
+    return;
+  }
+  lista.innerHTML = dados.habitos.map(h => {
+    const agendado = ehDia(h, k);
+    const feito = !!h.dias[k];
+    const progresso = h.meta ? `${totalFeitos(h)}/${h.meta}` : `${totalFeitos(h)} dia(s)`;
+    return `<div class="item">
+      ${agendado
+        ? `<button class="check ${feito ? 'on' : ''}" onclick="marcarDia('${h.id}','${k}')" aria-label="Marcar hoje">${feito ? '✓' : ''}</button>`
+        : `<span class="check vazio"></span>`}
+      <div class="info" onclick="abrirDetalhe('${h.id}')">
+        <div class="nome">${esc(h.nome)}</div>
+        <div class="muted">${agendado ? esc(h.desc || '') : 'não é hoje'}</div>
+      </div>
+      <div class="meta">${progresso}<br>sequência ${sequencia(h)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ---------- marcar dias e meta ----------
+function marcarDia(id, k){
+  const h = getHabito(id);
+  if (!h || k > hoje()) return;
+  if (h.dias[k]) delete h.dias[k]; else h.dias[k] = true;
+  salvar();
+  if (h.meta && totalFeitos(h) >= h.meta) concluir(h);
+  else renderTudo();
+}
+
+function concluir(h){
+  dados.habitos = dados.habitos.filter(x => x.id !== h.id);
+  salvar();
+  if (atualId === h.id) atualId = null;
+  document.getElementById('avisoTxt').textContent =
+    `Você chegou a ${h.meta} dias em "${h.nome}". Parabéns! O hábito foi concluído e saiu da lista.`;
+  dlgAviso.showModal();
+  mostrarTela('home');
+  renderTudo();
+}
+
+// ---------- detalhe ----------
+function abrirDetalhe(id){
+  atualId = id;
+  mesView = primeiroDoMes(new Date());
+  mostrarTela('detalhe');
+  renderDetalhe();
+}
+function voltar(){ atualId = null; mostrarTela('home'); renderHome(); }
+
+function mudarMes(delta){
+  mesView = new Date(mesView.getFullYear(), mesView.getMonth() + delta, 1);
+  renderDetalhe();
+}
+
+function renderDetalhe(){
+  const h = getHabito(atualId);
+  if (!h){ voltar(); return; }
+
+  document.getElementById('dNome').textContent = h.nome;
+  document.getElementById('dDesc').textContent = h.desc || '';
+
+  const n = totalFeitos(h);
+  document.getElementById('dProg').textContent = h.meta ? `${n} / ${h.meta}` : `${n} dia(s)`;
+  document.getElementById('dBarWrap').style.display = h.meta ? 'block' : 'none';
+  document.getElementById('dBar').style.width = h.meta ? Math.min(100, n / h.meta * 100) + '%' : '0';
+  document.getElementById('dInfo').textContent = `Dias: ${textoDias(h)} · sequência atual: ${sequencia(h)}`;
+
+  const ano = mesView.getFullYear(), mes = mesView.getMonth();
+  document.getElementById('dMes').textContent =
+    mesView.toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
+
+  const t = hoje();
+  const vazios = mesView.getDay();
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+  let html = '';
+  for (let i = 0; i < vazios; i++) html += '<span class="vazio-cell"></span>';
+  for (let d = 1; d <= totalDias; d++){
+    const k = chaveData(new Date(ano, mes, d));
+    const cls = ['dia'];
+    if (h.dias[k]) cls.push('feito');
+    if (k === t) cls.push('hoje');
+    if (!ehDia(h, k)) cls.push('fora');
+    html += `<button class="${cls.join(' ')}" ${k > t ? 'disabled' : ''} onclick="marcarDia('${h.id}','${k}')">${d}</button>`;
+  }
+  document.getElementById('cal').innerHTML = html;
+}
+
+// ---------- criar / editar / apagar ----------
+function preencher(h){
+  const form = document.getElementById('form');
+  form.nome.value = h.nome || '';
+  form.desc.value = h.desc || '';
+  form.meta.value = h.meta || '';
+  form.querySelectorAll('input[name=wd]').forEach(c => c.checked = (h.semana || []).includes(Number(c.value)));
+}
+
+function abrirNovo(){
+  editandoId = null;
+  document.getElementById('tituloForm').textContent = 'Novo hábito';
+  preencher({ nome:'', desc:'', semana:[0,1,2,3,4,5,6], meta:null });
+  dlgForm.showModal();
+}
+
+function abrirEditar(){
+  const h = getHabito(atualId);
+  if (!h) return;
+  editandoId = h.id;
+  document.getElementById('tituloForm').textContent = 'Editar hábito';
+  preencher(h);
+  dlgForm.showModal();
+}
+
+document.getElementById('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  const nome = f.nome.value.trim();
+  const semana = [...f.querySelectorAll('input[name=wd]:checked')].map(c => Number(c.value)).sort();
+  if (!nome) return;
+  if (!semana.length){ alert('Escolha pelo menos um dia da semana.'); return; }
+
+  const meta = parseInt(f.meta.value, 10);
+  const campos = { nome, desc: f.desc.value.trim(), semana, meta: meta > 0 ? meta : null };
+
+  let h;
+  if (editandoId){
+    h = getHabito(editandoId);
+    Object.assign(h, campos);
+  } else {
+    h = { id: uid(), ...campos, dias: {} };
+    dados.habitos.push(h);
+  }
+  editandoId = null;
+  salvar();
+  dlgForm.close();
+
+  if (h.meta && totalFeitos(h) >= h.meta) concluir(h);
+  else if (atualId) renderDetalhe();
+  renderTudo();
+});
+
+function apagarAtual(){
+  const h = getHabito(atualId);
+  if (!h) return;
+  if (!confirm(`Apagar "${h.nome}" e todo o histórico?`)) return;
+  dados.habitos = dados.habitos.filter(x => x.id !== h.id);
+  salvar();
+  voltar();
+}
+
+// ---------- exportar / importar ----------
+function exportar(){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type:'application/json' }));
+  a.download = `ritmo-${hoje()}.json`;
+  a.click();
+}
+function importar(input){
+  const arq = input.files[0];
+  if (!arq) return;
+  const leitor = new FileReader();
+  leitor.onload = () => {
+    try {
+      const d = JSON.parse(leitor.result);
+      if (!Array.isArray(d.habitos)) throw new Error();
+      if (!confirm('Substituir os hábitos atuais pelo backup?')) return;
+      dados = d;
+      salvar();
+      renderTudo();
+    } catch { alert('Arquivo inválido.'); }
+  };
+  leitor.readAsText(arq);
+  input.value = '';
+}
+
+function renderTudo(){
+  renderHome();
+  if (atualId) renderDetalhe();
+}
+
+renderTudo();
+</script>
+</body>
+</html>
